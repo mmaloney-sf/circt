@@ -2793,4 +2793,22 @@ firrtl.module @RemoveUnusedInvalid() {
 }
 // CHECK-NEXT: }
 
+// CHECK-LABEL: firrtl.module @ConstToNonConstTypeConnect
+firrtl.module @ConstToNonConstTypeConnect(in %in: !firrtl.const.uint<4>, out %out: !firrtl.uint<4>) {
+  // CHECK-NEXT: firrtl.strictconnect %out, %in : !firrtl.uint<4>, !firrtl.const.uint<4>
+  firrtl.connect %out, %in : !firrtl.uint<4>, !firrtl.const.uint<4>
+}
+
+// This checks that a folded const type from an originally non-const op propagates const to downstream/inserted ops
+// CHECK-LABEL: firrtl.module @ConstTypeReinference
+firrtl.module @ConstTypeReinference(in %constIn: !firrtl.const.uint<4>, in %nonConstIn: !firrtl.uint<3>, out %out: !firrtl.sint<6>) {
+  // CHECK-NEXT: [[VAL0:%.+]] = firrtl.pad %constIn, 5 : (!firrtl.const.uint<4>) -> !firrtl.const.uint<5>
+  // CHECK-NEXT: [[VAL1:%.+]] = firrtl.neg [[VAL0]] : (!firrtl.const.uint<5>) -> !firrtl.const.sint<6>
+  // CHECK-NEXT: firrtl.strictconnect %out, [[VAL1]] : !firrtl.sint<6>, !firrtl.const.sint<6>
+  %sub = firrtl.sub %nonConstIn, %nonConstIn : (!firrtl.uint<3>, !firrtl.uint<3>) -> !firrtl.uint<4>
+  %add = firrtl.add %constIn, %sub : (!firrtl.const.uint<4>, !firrtl.uint<4>) -> !firrtl.uint<5>
+  %neg = firrtl.neg %add : (!firrtl.uint<5>) -> !firrtl.sint<6>
+  firrtl.connect %out, %neg : !firrtl.sint<6>, !firrtl.sint<6>
+}
+
 }

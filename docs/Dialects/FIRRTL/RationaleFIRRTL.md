@@ -575,6 +575,8 @@ FIRRTL hardware types can be specified as `const`, meaning they can only be assi
 
 An aggregate type is `const` if all members are `const`. A non-`const` aggregate type can contain members that are both `const` and non-`const`.
 
+FIRRTL primitive ops that have all `const` operand types expect their result types to be `const`. A mix of `const` and non-`const` operand types expects non-`const` result types. This means that during canonicalization and other passes, folding an operand value of a primitive op can result in a result type changing from non-`const` to `const`. Since all FIRRTL primitive expressions implement `InferTypeOpInterface`, a canonicalization pattern matches on `InferTypeOpInterface` in order to propagate these type changes to downstream ops.
+
 ## Operations
 
 ### Multiple result `firrtl.instance` operation
