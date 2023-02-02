@@ -124,18 +124,35 @@ protected:
   /// the current scope. This is used for resolving last connect semantics, and
   /// for retrieving the responsible connect operation.
   ScopedDriverMap &driverMap;
+  bool isWithinNonconstCondition;
+  bool anyFailure = false;
 
 public:
-  LastConnectResolver(ScopedDriverMap &driverMap) : driverMap(driverMap) {}
+  LastConnectResolver(ScopedDriverMap &driverMap,
+                      bool isWithinNonconstCondition = false)
+      : driverMap(driverMap),
+        isWithinNonconstCondition(isWithinNonconstCondition) {}
 
   using FIRRTLVisitor<ConcreteT>::visitExpr;
   using FIRRTLVisitor<ConcreteT>::visitDecl;
   using FIRRTLVisitor<ConcreteT>::visitStmt;
 
+  LogicalResult result() { return failure(anyFailure); }
+
   /// Records a connection to a destination in the current scope. This will
   /// delete a previous connection to a destination if there was one. Returns
   /// true if an old connect was erased.
   bool setLastConnect(FieldRef dest, Operation *connection) {
+    // 'const' connections are disallowed within non-const conditions unless
+    // `dest` is local to the `connection` block
+    if (isWithinNonconstCondition && isConst(dest.getValue().getType()) &&
+        dest.getDefiningOp()->getBlock() != connection->getBlock()) {
+      connection->emitError(
+          "'const' sink \"" + getFieldName(dest).first +
+          "\" initialization is dependent on a non-'const' condition");
+      anyFailure = true;
+    }
+
     // Try to insert, if it doesn't insert, replace the previous value.
     auto itAndInserted = driverMap.getLastScope().insert({dest, connection});
     if (!std::get<1>(itAndInserted)) {
@@ -432,15 +449,19 @@ namespace {
 class WhenOpVisitor : public LastConnectResolver<WhenOpVisitor> {
 
 public:
-  WhenOpVisitor(ScopedDriverMap &driverMap, Value condition)
-      : LastConnectResolver<WhenOpVisitor>(driverMap), condition(condition) {}
+  WhenOpVisitor(ScopedDriverMap &driverMap, Value condition,
+                bool isWithinNonconstOuterCondition)
+      : LastConnectResolver<WhenOpVisitor>(
+            driverMap, isWithinNonconstOuterCondition ||
+                           (condition && !isConst(condition.getType()))),
+        condition(condition) {}
 
   using LastConnectResolver<WhenOpVisitor>::visitExpr;
   using LastConnectResolver<WhenOpVisitor>::visitDecl;
   using LastConnectResolver<WhenOpVisitor>::visitStmt;
 
   /// Process a block, recording each declaration, and expanding all whens.
-  void process(Block &block);
+  LogicalResult process(Block &block);
 
   /// Simulation Constructs.
   void visitStmt(AssertOp op);
@@ -456,8 +477,8 @@ private:
   /// scope, i.e. not in a WhenOp region, then there is no condition.
   Value andWithCondition(Operation *op, Value value) {
     // 'and' the value with the current condition.
-    return OpBuilder(op).createOrFold<AndPrimOp>(
-        condition.getLoc(), condition.getType(), condition, value);
+    return OpBuilder(op).createOrFold<AndPrimOp>(condition.getLoc(), condition,
+                                                 value);
   }
 
 private:
@@ -466,10 +487,11 @@ private:
 };
 } // namespace
 
-void WhenOpVisitor::process(Block &block) {
+LogicalResult WhenOpVisitor::process(Block &block) {
   for (auto &op : llvm::make_early_inc_range(block)) {
     dispatchVisitor(&op);
   }
+  return failure(anyFailure);
 }
 
 void WhenOpVisitor::visitStmt(PrintFOp op) {
@@ -508,7 +530,6 @@ void LastConnectResolver<ConcreteT>::processWhenOp(WhenOp whenOp,
   auto loc = whenOp.getLoc();
   Block *parentBlock = whenOp->getBlock();
   auto condition = whenOp.getCondition();
-  auto ui1Type = condition.getType();
 
   // Process both sides of the WhenOp, fixing up all simulation constructs,
   // and resolving last connect semantics in each block. This process returns
@@ -519,11 +540,13 @@ void LastConnectResolver<ConcreteT>::processWhenOp(WhenOp whenOp,
   Value thenCondition = whenOp.getCondition();
   if (outerCondition)
     thenCondition =
-        b.createOrFold<AndPrimOp>(loc, ui1Type, outerCondition, thenCondition);
+        b.createOrFold<AndPrimOp>(loc, outerCondition, thenCondition);
 
   auto &thenBlock = whenOp.getThenBlock();
   driverMap.pushScope();
-  WhenOpVisitor(driverMap, thenCondition).process(thenBlock);
+  if (failed(WhenOpVisitor(driverMap, thenCondition, isWithinNonconstCondition)
+                 .process(thenBlock)))
+    anyFailure = true;
   mergeBlock(*parentBlock, Block::iterator(whenOp), thenBlock);
   auto thenScope = driverMap.popScope();
 
@@ -535,11 +558,14 @@ void LastConnectResolver<ConcreteT>::processWhenOp(WhenOp whenOp,
         b.createOrFold<NotPrimOp>(loc, condition.getType(), condition);
     // Conjoin the when condition with the outer condition.
     if (outerCondition)
-      elseCondition = b.createOrFold<AndPrimOp>(loc, ui1Type, outerCondition,
-                                                elseCondition);
+      elseCondition =
+          b.createOrFold<AndPrimOp>(loc, outerCondition, elseCondition);
     auto &elseBlock = whenOp.getElseBlock();
     driverMap.pushScope();
-    WhenOpVisitor(driverMap, elseCondition).process(elseBlock);
+    if (failed(
+            WhenOpVisitor(driverMap, elseCondition, isWithinNonconstCondition)
+                .process(elseBlock)))
+      anyFailure = true;
     mergeBlock(*parentBlock, Block::iterator(whenOp), elseBlock);
     elseScope = driverMap.popScope();
   }
@@ -661,7 +687,7 @@ void ExpandWhensPass::runOnOperation() {
   ModuleVisitor visitor;
   if (!visitor.run(getOperation()))
     markAllAnalysesPreserved();
-  if (failed(visitor.checkInitialization()))
+  if (failed(visitor.result()) || failed(visitor.checkInitialization()))
     signalPassFailure();
 }
 
