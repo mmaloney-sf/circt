@@ -185,14 +185,11 @@ static bool isConstantZero(Attribute operand) {
 /// Return the result attribute, updating `op`'s result type to be a 'const'
 /// version of itself. This ensures that `materializeConstant` is provided a
 /// 'const' type for constant ops.
-/// TODO: Updating the result type is not actually implemented, constant ops
-/// need to be updated to use const types first.
 static Attribute foldResult(Operation *op, Attribute result) {
   assert(op->getNumResults() == 1 && "expected single result op");
-  // TODO: Uncomment once constant ops return const types
-  // if (auto resultType = op->getResultTypes()[0].dyn_cast<FIRRTLBaseType>();
-  //     resultType && result)
-  //   op->getResult(0).setType(resultType.getConstType(true));
+  if (auto resultType = op->getResultTypes()[0].dyn_cast<FIRRTLBaseType>();
+      resultType && result)
+    op->getResult(0).setType(resultType.getConstType(true));
   return result;
 }
 
@@ -1709,13 +1706,18 @@ static LogicalResult canonicalizeSingleSetConnect(StrictConnectOp op,
     if (isa<InvalidValueOp>(srcValueOp)) {
       if (op.getDest().getType().isa<BundleType, FVectorType>())
         return failure();
+
+      auto destType = op.getDest().getType();
+      // Make sure FIRRTLBaseType constants are 'const'
+      if (auto destBaseType = destType.dyn_cast<FIRRTLBaseType>())
+        destType = destBaseType.getConstType(true);
+
       if (op.getDest().getType().isa<ClockType, AsyncResetType, ResetType>())
         replacement = rewriter.create<SpecialConstantOp>(
-            op.getSrc().getLoc(), op.getDest().getType(),
-            rewriter.getBoolAttr(false));
+            op.getSrc().getLoc(), destType, rewriter.getBoolAttr(false));
       else
         replacement = rewriter.create<ConstantOp>(
-            op.getSrc().getLoc(), op.getDest().getType(),
+            op.getSrc().getLoc(), destType,
             getIntZerosAttr(op.getDest().getType()));
     }
     // This will be replaced with the constant source.  First, make sure the
@@ -2162,7 +2164,7 @@ static void erasePort(PatternRewriter &rewriter, Value port) {
   auto getClock = [&] {
     if (!clock)
       clock = rewriter.create<SpecialConstantOp>(
-          port.getLoc(), ClockType::get(rewriter.getContext()), false);
+          port.getLoc(), ClockType::get(rewriter.getContext(), true), false);
     return clock;
   };
 

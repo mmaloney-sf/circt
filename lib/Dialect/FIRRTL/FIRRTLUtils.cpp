@@ -104,18 +104,23 @@ void circt::firrtl::emitConnect(ImplicitLocOpBuilder &builder, Value dst,
     IntType tmpType = dstType.cast<IntType>();
     if (tmpType.isSigned())
       tmpType = UIntType::get(dstType.getContext(), dstWidth);
-    src = builder.create<TailPrimOp>(tmpType, src, srcWidth - dstWidth);
+    src = builder.create<TailPrimOp>(tmpType.getConstType(srcType.isConst()),
+                                     src, srcWidth - dstWidth);
     // Insert the cast back to signed if needed.
     if (tmpType != dstType)
-      src = builder.create<AsSIntPrimOp>(dstType, src);
+      src = builder.create<AsSIntPrimOp>(
+          dstType.getConstType(srcType.isConst()), src);
   } else if (srcWidth < dstWidth) {
     // Need to extend arg.
     src = builder.create<PadPrimOp>(src, dstWidth);
   }
 
   // Strict connect requires the types to be completely equal, including
-  // connecting uint<1> to abstract reset types.
-  if (dstType == src.getType())
+  // connecting uint<1> to abstract reset types, except that srcType may be
+  // the 'const' version of dstType.
+  if (dstType == src.getType() ||
+      (src.getType().isa<FIRRTLBaseType>() &&
+       dstType == src.getType().cast<FIRRTLBaseType>().getConstType(false)))
     builder.create<StrictConnectOp>(dst, src);
   else
     builder.create<ConnectOp>(dst, src);

@@ -178,8 +178,8 @@ firrtl.circuit "DeleteEmptyModule" {
 firrtl.circuit "ForwardConstant" {
   // CHECK-NOT: Zero
   firrtl.module private @Zero(out %zero: !firrtl.uint<1>) {
-    %c0_ui1 = firrtl.constant 0 : !firrtl.uint<1>
-    firrtl.strictconnect %zero, %c0_ui1 : !firrtl.uint<1>
+    %c0_ui1 = firrtl.constant 0 : !firrtl.const.uint<1>
+    firrtl.strictconnect %zero, %c0_ui1 : !firrtl.uint<1>, !firrtl.const.uint<1>
   }
   // CHECK-LABEL: @ForwardConstant
   firrtl.module @ForwardConstant(out %zero: !firrtl.uint<1>) {
@@ -259,7 +259,7 @@ firrtl.circuit "MemoryInDeadCycle" {
   firrtl.module public @MemoryInDeadCycle(in %clock: !firrtl.clock, in %addr: !firrtl.uint<4>) {
 
     // CHECK-NOT: firrtl.mem
-    %c1_ui1 = firrtl.constant 1 : !firrtl.uint<1>
+    %c1_ui1 = firrtl.constant 1 : !firrtl.const.uint<1>
     %Memory_r = firrtl.mem Undefined
       {
         depth = 12 : i64,
@@ -272,7 +272,7 @@ firrtl.circuit "MemoryInDeadCycle" {
     %r_addr = firrtl.subfield %Memory_r[addr] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data flip: uint<42>>
     firrtl.connect %r_addr, %addr : !firrtl.uint<4>, !firrtl.uint<4>
     %r_en = firrtl.subfield %Memory_r[en] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data flip: uint<42>>
-    firrtl.connect %r_en, %c1_ui1 : !firrtl.uint<1>, !firrtl.uint<1>
+    firrtl.connect %r_en, %c1_ui1 : !firrtl.uint<1>, !firrtl.const.uint<1>
     %r_clk = firrtl.subfield %Memory_r[clk] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data flip: uint<42>>
     firrtl.connect %r_clk, %clock : !firrtl.clock, !firrtl.clock
 
@@ -289,11 +289,11 @@ firrtl.circuit "MemoryInDeadCycle" {
     %w_addr = firrtl.subfield %Memory_w[addr] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data: uint<42>, mask: uint<1>>
     firrtl.connect %w_addr, %addr : !firrtl.uint<4>, !firrtl.uint<4>
     %w_en = firrtl.subfield %Memory_w[en] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data: uint<42>, mask: uint<1>>
-    firrtl.connect %w_en, %c1_ui1 : !firrtl.uint<1>, !firrtl.uint<1>
+    firrtl.connect %w_en, %c1_ui1 : !firrtl.uint<1>, !firrtl.const.uint<1>
     %w_clk = firrtl.subfield %Memory_w[clk] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data: uint<42>, mask: uint<1>>
     firrtl.connect %w_clk, %clock : !firrtl.clock, !firrtl.clock
     %w_mask = firrtl.subfield %Memory_w[mask] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data: uint<42>, mask: uint<1>>
-    firrtl.connect %w_mask, %c1_ui1 : !firrtl.uint<1>, !firrtl.uint<1>
+    firrtl.connect %w_mask, %c1_ui1 : !firrtl.uint<1>, !firrtl.const.uint<1>
 
     %w_data = firrtl.subfield %Memory_w[data] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data: uint<42>, mask: uint<1>>
     %r_data = firrtl.subfield %Memory_r[data] : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data flip: uint<42>>
@@ -316,5 +316,25 @@ firrtl.circuit "DeadInputPort"  {
     %bar_a = firrtl.instance bar  @Bar(in a: !firrtl.uint<1>)
     firrtl.strictconnect %bar_a, %a : !firrtl.uint<1>
     firrtl.strictconnect %b, %bar_a : !firrtl.uint<1>
+  }
+}
+
+// -----
+// CHECK-LABEL: firrtl.circuit "PropagateConstType"
+firrtl.circuit "PropagateConstType" {
+  // CHECK-NOT: firrtl.module private @Bar
+  firrtl.module private @Bar(out %a: !firrtl.uint<1>) {
+    %c = firrtl.constant 1 : !firrtl.const.uint<1>
+    firrtl.strictconnect %a, %c : !firrtl.uint<1>, !firrtl.const.uint<1>
+  }
+
+  // CHECK-LABEL: firrtl.module @PropagateConstType
+  firrtl.module @PropagateConstType(out %a: !firrtl.uint<1>) {
+    // CHECK-NEXT: [[CONST:%.+]] = firrtl.constant 1 : !firrtl.const.uint<1>
+    // CHECK-NEXT: [[VAL:%.+]] = firrtl.not [[CONST]] : (!firrtl.const.uint<1>) -> !firrtl.const.uint<1>
+    // CHECK-NEXT: firrtl.strictconnect %a, [[VAL]] : !firrtl.uint<1>, !firrtl.const.uint<1>
+    %bar_a = firrtl.instance bar  @Bar(out a: !firrtl.uint<1>)
+    %0 = firrtl.not %bar_a : (!firrtl.uint<1>) -> !firrtl.uint<1>
+    firrtl.strictconnect %a, %0 : !firrtl.uint<1>
   }
 }

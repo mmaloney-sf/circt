@@ -37,7 +37,6 @@ firrtl.module @test(in %clock: !firrtl.clock, in %reset: !firrtl.asyncreset, in 
 }
 }
 
-
 // -----
 
 firrtl.circuit "test" {

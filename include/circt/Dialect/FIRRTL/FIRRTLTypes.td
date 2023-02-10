@@ -129,6 +129,11 @@ def SizedRefType : FIRRTLDialectType<
         "!$_self.cast<RefType>().getType().hasUninferredWidth()">,
    "sized reference type", "::circt::firrtl::RefType">;
 
+class ConstType<Type t> : FIRRTLDialectType<
+  And<[t.predicate,
+       CPred<"$_self.isa<FIRRTLBaseType>() && $_self.cast<FIRRTLBaseType>().isConst()">]>,
+  "a const base type", t.cppClassName>;
+
 //===----------------------------------------------------------------------===//
 // FIRRTL Types Predicates
 //===----------------------------------------------------------------------===//

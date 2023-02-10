@@ -144,7 +144,7 @@ firrtl.circuit "foo" {
 firrtl.circuit "Foo" {
 firrtl.module @Foo() {
   // expected-error @+1 {{invalid kind of type specified}}
-  firrtl.constant 100 : !firrtl.bundle<>
+  firrtl.constant 100 : !firrtl.const.bundle<>
 }
 }
 
@@ -153,7 +153,7 @@ firrtl.module @Foo() {
 firrtl.circuit "Foo" {
 firrtl.module @Foo() {
   // expected-error @+1 {{constant too large for result type}}
-  firrtl.constant 100 : !firrtl.uint<4>
+  firrtl.constant 100 : !firrtl.const.uint<4>
 }
 }
 
@@ -162,7 +162,7 @@ firrtl.module @Foo() {
 firrtl.circuit "Foo" {
 firrtl.module @Foo() {
   // expected-error @+1 {{constant too large for result type}}
-  firrtl.constant -100 : !firrtl.sint<4>
+  firrtl.constant -100 : !firrtl.const.sint<4>
 }
 }
 
@@ -171,7 +171,7 @@ firrtl.module @Foo() {
 firrtl.circuit "Foo" {
 firrtl.module @Foo() {
   // expected-error @+1 {{special constants can only be 0 or 1}}
-  firrtl.specialconstant 2 : !firrtl.clock
+  firrtl.specialconstant 2 : !firrtl.const.clock
 }
 }
 
@@ -180,7 +180,7 @@ firrtl.module @Foo() {
 firrtl.circuit "Foo" {
 firrtl.module @Foo() {
   // expected-error @+1 {{special constants can only be 0 or 1}}
-  firrtl.specialconstant 2 : !firrtl.reset
+  firrtl.specialconstant 2 : !firrtl.const.reset
 }
 }
 
@@ -189,7 +189,7 @@ firrtl.module @Foo() {
 firrtl.circuit "Foo" {
 firrtl.module @Foo() {
   // expected-error @+1 {{special constants can only be 0 or 1}}
-  firrtl.specialconstant 2 : !firrtl.asyncreset
+  firrtl.specialconstant 2 : !firrtl.const.asyncreset
 }
 }
 
@@ -197,9 +197,9 @@ firrtl.module @Foo() {
 
 firrtl.circuit "Foo" {
   firrtl.module @Foo(in %clk: !firrtl.clock, in %reset: !firrtl.uint<2>) {
-    %zero = firrtl.constant 0 : !firrtl.uint<1>
+    %zero = firrtl.constant 0 : !firrtl.const.uint<1>
     // expected-error @+1 {{'firrtl.regreset' op operand #1 must be Reset, but got '!firrtl.uint<2>'}}
-    %a = firrtl.regreset %clk, %reset, %zero {name = "a"} : !firrtl.clock, !firrtl.uint<2>, !firrtl.uint<1>, !firrtl.uint<1>
+    %a = firrtl.regreset %clk, %reset, %zero {name = "a"} : !firrtl.clock, !firrtl.uint<2>, !firrtl.const.uint<1>, !firrtl.uint<1>
   }
 }
 
@@ -867,9 +867,9 @@ firrtl.circuit "AnalogVectorRegister" {
 
 firrtl.circuit "MismatchedRegister" {
   firrtl.module @MismatchedRegister(in %clock: !firrtl.clock, in %reset: !firrtl.asyncreset, out %z: !firrtl.vector<uint<1>, 1>) {
-    %c0_ui1 = firrtl.constant 0 : !firrtl.uint<1>
-    // expected-error @+1 {{type mismatch between register '!firrtl.vector<uint<1>, 1>' and reset value '!firrtl.uint<1>'}}
-    %r = firrtl.regreset %clock, %reset, %c0_ui1  : !firrtl.clock, !firrtl.asyncreset, !firrtl.uint<1>, !firrtl.vector<uint<1>, 1>
+    %c0_ui1 = firrtl.constant 0 : !firrtl.const.uint<1>
+    // expected-error @+1 {{type mismatch between register '!firrtl.vector<uint<1>, 1>' and reset value '!firrtl.const.uint<1>'}}
+    %r = firrtl.regreset %clock, %reset, %c0_ui1  : !firrtl.clock, !firrtl.asyncreset, !firrtl.const.uint<1>, !firrtl.vector<uint<1>, 1>
     firrtl.connect %z, %r : !firrtl.vector<uint<1>, 1>, !firrtl.vector<uint<1>, 1>
   }
 }
@@ -1126,5 +1126,25 @@ firrtl.circuit "AnalogDifferentWidths" {
     %b = firrtl.wire : !firrtl.analog<2>
     // expected-error @below {{not all known operand widths match}}
     firrtl.attach %a, %b : !firrtl.analog<1>, !firrtl.analog<2>
+  }
+}
+
+// -----
+// Bitcast non-const to const
+
+firrtl.circuit "BitcastNonConstToConst" {
+  firrtl.module @BitcastNonConstToConst(in %a: !firrtl.uint<1>) {
+    // expected-error @+1 {{cannot cast non-'const' input type '!firrtl.uint<1>' to 'const' result type '!firrtl.const.sint<1>'}}
+    %b = firrtl.bitcast %a : (!firrtl.uint<1>) -> !firrtl.const.sint<1>
+  }
+}
+
+// -----
+// NonConstInferredConst
+
+firrtl.circuit "NonConstInferredConst" {
+  firrtl.module @NonConstInferredConst(in %a: !firrtl.const.uint<1>) {
+    // expected-error @+1 {{'firrtl.add' op inferred type(s) '!firrtl.const.uint<2>' are incompatible with return type(s) of operation '!firrtl.uint<2>'}}
+    %b = firrtl.add %a, %a : (!firrtl.const.uint<1>, !firrtl.const.uint<1>) -> !firrtl.uint<2>
   }
 }
