@@ -294,6 +294,7 @@ def RefImpl : FIRRTLImplType<"Ref", [], "::circt::firrtl::FIRRTLType"> {
   }];
   let parameters = (ins TypeParameter<"::circt::firrtl::FIRRTLBaseType",
                                       "Type of reference target">:$type);
+  let genStorageClass = true;
   let genVerifyDecl = true;
 
   let skipDefaultBuilders = true;
