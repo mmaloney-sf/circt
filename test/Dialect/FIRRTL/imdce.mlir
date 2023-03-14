@@ -199,21 +199,21 @@ firrtl.circuit "RefPorts" {
   // CHECK-NOT: @dead_ref_send
   firrtl.module private @dead_ref_send(in %source: !firrtl.uint<1>, out %dest: !firrtl.ref<uint<1>>) {
     %ref = firrtl.ref.send %source: !firrtl.uint<1>
-    firrtl.ref.define %dest, %ref : !firrtl.ref<uint<1>>
+    firrtl.ref.define %dest, %ref : !firrtl.ref<uint<1>>, !firrtl.ref<uint<1>>
   }
 
   // CHECK-LABEL: @dead_ref_port
   // CHECK-NOT: firrtl.ref
   firrtl.module private @dead_ref_port(in %source: !firrtl.uint<1>, out %dest: !firrtl.uint<1>, out %ref_dest: !firrtl.ref<uint<1>>) {
     %ref_not = firrtl.ref.send %source: !firrtl.uint<1>
-    firrtl.ref.define %ref_dest, %ref_not : !firrtl.ref<uint<1>>
+    firrtl.ref.define %ref_dest, %ref_not : !firrtl.ref<uint<1>>, !firrtl.ref<uint<1>>
     firrtl.strictconnect %dest, %source : !firrtl.uint<1>
   }
 
   // CHECK: @live_ref
   firrtl.module private @live_ref(in %source: !firrtl.uint<1>, out %dest: !firrtl.ref<uint<1>>) {
     %ref_source = firrtl.ref.send %source: !firrtl.uint<1>
-    firrtl.ref.define %dest, %ref_source : !firrtl.ref<uint<1>>
+    firrtl.ref.define %dest, %ref_source : !firrtl.ref<uint<1>>, !firrtl.ref<uint<1>>
   }
 
   // CHECK-LABEL: @RefPorts
@@ -316,5 +316,26 @@ firrtl.circuit "DeadInputPort"  {
     %bar_a = firrtl.instance bar  @Bar(in a: !firrtl.uint<1>)
     firrtl.strictconnect %bar_a, %a : !firrtl.uint<1>
     firrtl.strictconnect %b, %bar_a : !firrtl.uint<1>
+  }
+}
+
+// -----
+// Note this only works because dominance happens to work out.  See imdce-nyi.mlir.
+
+// CHECK-LABEL: firrtl.circuit "NoWireForLiveRefInputPort"
+firrtl.circuit "NoWireForLiveRefInputPort" {
+   // CHECK-NOT: @Child
+  firrtl.module private @Child(in %in: !firrtl.ref<uint<1>>) { }
+  // CHECK: @NoWireForLiveRefInputPort
+  firrtl.module @NoWireForLiveRefInputPort(in %in: !firrtl.uint<1>, out %out: !firrtl.uint<1>) {
+    // CHECK-NEXT: %[[REF:.+]] = firrtl.ref.send %in
+    // CHECK-NEXT: %[[RES:.+]] = firrtl.ref.resolve %[[REF]]
+    // CHECK-NEXT: firrtl.strictconnect %out, %[[RES]]
+    // CHECK-NEXT: }
+    %child_ref = firrtl.instance child @Child(in in: !firrtl.ref<uint<1>>)
+    %ref = firrtl.ref.send %in : !firrtl.uint<1>
+    firrtl.ref.define %child_ref, %ref : !firrtl.ref<uint<1>>, !firrtl.ref<uint<1>>
+    %res = firrtl.ref.resolve %child_ref : !firrtl.ref<uint<1>>
+    firrtl.strictconnect %out, %res : !firrtl.uint<1>
   }
 }
