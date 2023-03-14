@@ -812,9 +812,13 @@ StringRef getVerilogValueName(Value val) {
   if (auto *op = val.getDefiningOp())
     return getSymOpName(op);
 
-  if (auto port = val.dyn_cast<BlockArgument>())
+  if (auto port = val.dyn_cast<BlockArgument>()) {
+    if (auto forOp =
+            dyn_cast<ForProceduralOp>(port.getParentBlock()->getParentOp()))
+      return forOp->getAttrOfType<StringAttr>("hw.verilogName");
     return getPortVerilogName(port.getParentBlock()->getParentOp(),
                               port.getArgNumber());
+  }
   assert(false && "unhandled value");
   return {};
 }
@@ -2988,6 +2992,8 @@ private:
   LogicalResult visitSV(GenerateOp op);
   LogicalResult visitSV(GenerateCaseOp op);
 
+  LogicalResult visitSV(ForProceduralOp op);
+
   void emitAssertionLabel(Operation *op, StringRef opName);
   void emitAssertionMessage(StringAttr message, ValueRange args,
                             SmallPtrSetImpl<Operation *> &ops,
@@ -3536,6 +3542,26 @@ LogicalResult StmtEmitter::visitSV(GenerateCaseOp op) {
 
   startStatement();
   ps << "endcase";
+  setPendingNewline();
+  return success();
+}
+
+LogicalResult StmtEmitter::visitSV(ForProceduralOp op) {
+  emitSVAttributes(op);
+  // TODO: location info?
+  startStatement();
+  // for (genvar i = 0; i < SIZE; i++) begin
+  // end
+  auto iterName = getSymOpName(op);
+  ps.invokeWithStringOS([&](auto &os) {
+    os << "for (integer " << iterName << " = " << op.getLowerBound()
+       << "; " << iterName << " < " << op.getUpperBound() << "; " << iterName << " = "
+       << iterName << " + " << op.getStep() << ") begin";
+  });
+  setPendingNewline();
+  emitStatementBlock(op.getBody().getBlocks().front());
+  startStatement();
+  ps << "end";
   setPendingNewline();
   return success();
 }

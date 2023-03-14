@@ -260,13 +260,28 @@ void FirRegLower::lower() {
             builder.create<sv::IfDefProceduralOp>(randInitRef, [&] {
               // Create randomization vector
               SmallVector<Value> randValues;
-              for (uint64_t x = 0; x < (maxBit + 31) / 32; ++x) {
-                auto lhs =
-                    builder.create<sv::LogicOp>(loc, builder.getIntegerType(32),
-                                                "_RANDOM_" + llvm::utostr(x));
-                auto rhs = builder.create<sv::MacroRefExprSEOp>(
-                    loc, builder.getIntegerType(32), "RANDOM");
-                builder.create<sv::BPAssignOp>(loc, lhs, rhs);
+              auto len = (maxBit + 31) / 32;
+              auto logic = builder.create<sv::LogicOp>(
+                  loc,
+                  hw::UnpackedArrayType::get(builder.getIntegerType(32), len),
+                  "_RANDOM");
+
+              auto forLoop = builder.create<sv::ForProceduralOp>(
+                  loc, 0, (maxBit + 31) / 32, 1,
+                  builder.getIntegerType(llvm::Log2_64_Ceil(len)), loc, "i",
+                  [&](BlockArgument iter) {
+                    auto rhs = builder.create<sv::MacroRefExprSEOp>(
+                        loc, builder.getIntegerType(32), "RANDOM");
+                    auto lhs =
+                        builder.create<sv::ArrayIndexInOutOp>(loc, logic, iter);
+                    builder.create<sv::BPAssignOp>(loc, lhs, rhs);
+                  });
+              builder.setInsertionPointAfter(forLoop);
+              for (uint64_t x = 0; x < len; ++x) {
+                auto lhs = builder.create<sv::ArrayIndexInOutOp>(
+                    loc, logic,
+                    getOrCreateConstant(loc,
+                                        APInt(llvm::Log2_64_Ceil(len), x)));
                 randValues.push_back(lhs.getResult());
               }
 

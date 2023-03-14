@@ -976,6 +976,20 @@ void OrderedOutputOp::build(OpBuilder &builder, OperationState &result,
     body();
 }
 
+void ForProceduralOp::build(OpBuilder &builder, OperationState &result,
+                            unsigned a, unsigned b, unsigned c,
+                            IntegerType type, Location loc, StringRef name,
+                            std::function<void(BlockArgument)> body) {
+  OpBuilder::InsertionGuard guard(builder);
+  build(builder, result, a, b, c, name);
+  auto *region = result.regions.front().get();
+  builder.createBlock(region);
+  auto blockArgument = region->addArgument(type, loc);
+
+  if (body)
+    body(blockArgument);
+}
+
 //===----------------------------------------------------------------------===//
 // Assignment statements
 //===----------------------------------------------------------------------===//

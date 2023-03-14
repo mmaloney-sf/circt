@@ -50,3 +50,26 @@ def GenerateCaseOp : SVOp<"generate.case",
 
   let hasVerifier = true;
 }
+
+def ForProceduralOp : SVOp<"for.procedural", [SingleBlock, NoTerminator,
+                        ProceduralOp, ProceduralRegion]> {
+  let summary = "System verilog for loop";
+
+  let description = [{
+    This operation defines System Verilog for loop.
+  }];
+
+  let regions = (region SizedRegion<1>:$body);
+  let arguments = (ins I32Attr:$lowerBound,
+                       I32Attr:$upperBound,
+                       I32Attr:$step,
+                       DefaultValuedAttr<StrAttr, "{}">:$iterName);
+  let results = (outs);
+  let builders = [
+      OpBuilder<(ins "unsigned":$lowerBound, "unsigned":$upperBound,
+                     "unsigned":$step, "IntegerType":$iterArg, "Location": $loc, "StringRef":$iterName,
+                     CArg<"std::function<void(BlockArgument)>", "{}">:$thenCtor)>
+  ];
+
+  let assemblyFormat = "`from` $lowerBound `to` $upperBound `by` $step $body attr-dict";
+}
