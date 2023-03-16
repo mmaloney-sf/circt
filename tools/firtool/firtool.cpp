@@ -661,10 +661,13 @@ static LogicalResult processBuffer(
         firrtl::createEmitOMIRPass(omirOutFile));
 
   if (!disableOptimization &&
-      preserveAggregate != firrtl::PreserveAggregate::None)
+      preserveAggregate != firrtl::PreserveAggregate::None) {
     pm.nest<firrtl::CircuitOp>().nest<firrtl::FModuleOp>().addPass(
         firrtl::createMergeConnectionsPass(
             !disableAggressiveMergeConnections.getValue()));
+    pm.nest<firrtl::CircuitOp>().nest<firrtl::FModuleOp>().addPass(
+        firrtl::createVectorizationPass());
+  }
 
   // Lower if we are going to verilog or if lowering was specifically requested.
   if (outputFormat != OutputIRFir) {
