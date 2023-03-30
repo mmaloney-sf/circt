@@ -530,13 +530,3 @@ circuit LeadingProbe:
   module LeadingProbe:
     input in : UInt<1>
     probe(in) ; expected-error {{unexpected probe() as start of statement}}
-
-;// -----
-
-; This should be supported, needs internal support to land first.
-circuit DefineWidths:
-  module DefineWidths:
-    input in : UInt<1>
-    output p : Probe<UInt>
-    define p = probe(in) ; expected-error {{'firrtl.ref.define' op requires all operands to have the same type}}
-
