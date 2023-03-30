@@ -39,6 +39,32 @@ void ForkOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.insert<circt::dc::EliminateSimpleForkPattern>(context);
 }
 
+// =============================================================================
+// UnpackOp
+// =============================================================================
+
+struct EliminatePackUnpackPattern : public OpRewritePattern<UnpackOp> {
+  using OpRewritePattern<UnpackOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(UnpackOp unpack,
+                                PatternRewriter &rewriter) const override {
+    auto pack = unpack.data().getDefiningOp<PackOp>();
+    if (!pack)
+      return failure();
+
+    // Check that the pack value type is the same as the unpack value type.
+    if (pack.getType() != unpack.getType())
+      return failure();
+
+    rewriter.replaceOp(unpack, pack.data());
+    return success();
+  }
+};
+
+void UnpackOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.insert<circt::dc::EliminatePackUnpackPattern>(context);
+}
+
 } // namespace dc
 } // namespace circt
 

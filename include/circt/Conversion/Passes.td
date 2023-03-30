@@ -387,6 +387,20 @@ def HandshakeToHW : Pass<"lower-handshake-to-hw", "mlir::ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// HandshakeToDC
+//===----------------------------------------------------------------------===//
+
+def HandshakeToDC : Pass<"lower-handshake-to-dc", "mlir::ModuleOp"> {
+  let summary = "Lower Handshake to DC";
+  let description = [{
+    Lower Handshake to DC operations.
+  }];
+  let constructor = "circt::createHandshakeToDCPass()";
+  let dependentDialects = ["dc::DCDialect", "esi::ESIDialect"];
+}
+
+
+//===----------------------------------------------------------------------===//
 // HandshakeToFIRRTL
 //===----------------------------------------------------------------------===//
 

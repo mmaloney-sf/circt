@@ -20,4 +20,11 @@ def TokenType : DCTypeDef<"Token"> {
   let assemblyFormat = "";
 }
 
+// A value type is a set of values which is wrapped with token semantics.
+def ValueType : DCTypeDef<"Value"> {
+  let mnemonic = "value";
+  let parameters = (ins ArrayRefParameter<"Type">:$innerTypes);
+  let assemblyFormat = "`<`$innerTypes`>`";
+}
+
 #endif // CIRCT_DIALECT_DC_TYPES_TD
