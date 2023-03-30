@@ -22,12 +22,21 @@ namespace dc {
 #include "circt/Dialect/DC/DCCanonicalization.h.inc"
 
 // =============================================================================
-// SyncOp
+// JoinOp
 // =============================================================================
 
-void SyncOp::getCanonicalizationPatterns(RewritePatternSet &results,
+void JoinOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.insert<circt::dc::EliminateSimpleSyncPattern>(context);
+  results.insert<circt::dc::EliminateSimpleJoinPattern>(context);
+}
+
+// =============================================================================
+// ForkOp
+// =============================================================================
+
+void ForkOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.insert<circt::dc::EliminateSimpleForkPattern>(context);
 }
 
 } // namespace dc

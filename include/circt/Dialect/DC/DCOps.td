@@ -22,7 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class DCOp<string mnemonic, list<Trait> traits = []> :
   Op<DCDialect, mnemonic, traits>;
 
-def SyncOp : DCOp<"sync"> {
+def JoinOp : DCOp<"join"> {
   let summary = "Synchronizes the incoming tokens with the outgoing token";
   let description = [{
     This operator synchronizes all incoming tokens. Synchronization implies applying
@@ -30,7 +30,7 @@ def SyncOp : DCOp<"sync"> {
 
     Example:
     ```mlir
-    %0 = dc.sync %a, %b
+    %0 = dc.join %a, %b
     ```
   }];
 
@@ -40,5 +40,65 @@ def SyncOp : DCOp<"sync"> {
   let assemblyFormat = "$inputs attr-dict";
   let hasCanonicalizer = 1;
 }
+
+def ForkOp : DCOp<"fork"> {
+    let summary = "Splits the incoming token into multiple outgoing tokens";
+    let description = [{
+        This operator splits the incoming token into multiple outgoing tokens.
+    
+        Example:
+        ```mlir
+        %0, %1 = dc.fork %a : 
+        ```
+    }];
+    
+    let arguments = (ins TokenType:$input);
+    let results = (outs Variadic<TokenType>:$outputs);
+
+    let assemblyFormat = "$input attr-dict (`:` qualified(type($outputs))^)?";
+    let hasCanonicalizer = 1;
+}
+
+def SymbolOp : DCOp<"symbol", [
+        Symbol
+    ]> {
+    let summary = "Indicates a symbol in the control and dataflow graph";
+    let description = [{
+        This operator indicates a symbol in the control and dataflow graph.
+        A symbol can be referenced from within `dc.node` operations.
+    
+        Example:
+        ```mlir
+        dc.node @foo
+        ```
+    }];
+
+    let arguments = (ins SymbolNameAttr:$sym_name);
+    let results = (outs);
+
+    let assemblyFormat = "$sym_name attr-dict";
+}
+
+class SameTypeConstraint<string lhs, string rhs>
+ : TypesMatchWith<"lhs and rhs types should be equivalent",
+                   lhs, rhs, [{ $_self }]>;
+
+// Define `dc.node` which is an operation that contains a list of references to
+// `dc.symbol` ops.
+class NodeOp<string mnemonic, list<Trait> traits = []> : DCOp<mnemonic,
+    !listconcat(traits,[
+        SingleBlock,
+        SameTypeConstraint<"out", "in">
+    ])> {
+    let arguments = (ins
+        AnyType:$in,
+        FlatSymbolRefArrayAttr:$symbols
+    );
+    let results = (outs AnyType:$out);
+    let assemblyFormat = "$in `[` $symbols `]` attr-dict `:` type($out)";
+}
+
+def ControlNode : NodeOp<"control"> {}
+def DataNode : NodeOp<"data"> {}
 
 #endif // CIRCT_DIALECT_DC_OPS_TD

@@ -19,8 +19,12 @@ include "circt/Dialect/DC/DC.td"
 include "mlir/IR/PatternBase.td"
 
 def HasOneOperand : Constraint<CPred<"$_self.size() == 1">, "has one operand">;
+def HasOneResult : Constraint<CPred<"$_self.size() == 1">, "has one result">;
 
-def EliminateSimpleSyncPattern : Pat<(SyncOp $arg), (replaceWithValue $arg),
+def EliminateSimpleJoinPattern : Pat<(JoinOp $arg), (replaceWithValue $arg),
                                        [(HasOneOperand:$arg)]>;
+
+def EliminateSimpleForkPattern : Pat<(ForkOp:$res $arg), (replaceWithValue $arg),
+                                       [(HasOneResult:$res)]>;
 
 #endif // CIRCT_DIALECT_DC_DCCANONICALIZATION_TD
