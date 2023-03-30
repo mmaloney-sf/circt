@@ -12,10 +12,10 @@
 include "mlir/IR/OpBase.td"
 
 def DCDialect : Dialect {
-  let name = "DC";
+  let name = "dc";
   let summary = "Dynamic Control";
   let description = [{
-    This is the `DC` dialect, used to represent dynamic control constructs with
+    This is the `dc` dialect, used to represent dynamic control constructs with
     handshaking semantics.
   }];
   let cppNamespace = "circt::dc";

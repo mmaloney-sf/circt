@@ -38,6 +38,7 @@ def SyncOp : DCOp<"sync"> {
   let results = (outs TokenType:$output);
 
   let assemblyFormat = "$inputs attr-dict";
+  let hasCanonicalizer = 1;
 }
 
 #endif // CIRCT_DIALECT_DC_OPS_TD

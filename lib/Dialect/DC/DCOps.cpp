@@ -17,5 +17,21 @@ using namespace circt;
 using namespace dc;
 using namespace mlir;
 
+namespace circt {
+namespace dc {
+#include "circt/Dialect/DC/DCCanonicalization.h.inc"
+
+// =============================================================================
+// SyncOp
+// =============================================================================
+
+void SyncOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.insert<circt::dc::EliminateSimpleSyncPattern>(context);
+}
+
+} // namespace dc
+} // namespace circt
+
 #define GET_OP_CLASSES
 #include "circt/Dialect/DC/DC.cpp.inc"

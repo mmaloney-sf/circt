@@ -1,7 +1,12 @@
-add_circt_dialect(DC DC)
-add_circt_dialect_doc(DC DC)
+add_circt_dialect(DC dc)
+add_circt_dialect_doc(DC dc)
 
-set(LLVM_TARGET_DEFINITIONS Passes.td)
-mlir_tablegen(Passes.h.inc -gen-pass-decls)
+set(LLVM_TARGET_DEFINITIONS DCPasses.td)
+mlir_tablegen(DCPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(CIRCTDCTransformsIncGen)
-add_circt_doc(Passes DCPasses -gen-pass-doc)
+add_circt_doc(DCPasses DCPasses -gen-pass-doc)
+
+set(LLVM_TARGET_DEFINITIONS DCCanonicalization.td)
+mlir_tablegen(DCCanonicalization.h.inc -gen-rewriters)
+add_public_tablegen_target(CIRCTDCCanonicalizationIncGen)
+add_dependencies(circt-headers CIRCTDCCanonicalizationIncGen)
