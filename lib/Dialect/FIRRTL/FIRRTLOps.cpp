@@ -2797,7 +2797,7 @@ FIRRTLType SubfieldOp::inferReturnType(ValueRange operands,
 
   // SubfieldOp verifier checks that the field index is valid with number of
   // subelements.
-  return inType.getElement(fieldIndex).type;
+  return inType.getElement(fieldIndex).type.getConstType(inType.isConst());
 }
 
 bool SubfieldOp::isFieldFlipped() {
@@ -2814,7 +2814,7 @@ FIRRTLType SubindexOp::inferReturnType(ValueRange operands,
 
   if (auto vectorType = inType.dyn_cast<FVectorType>()) {
     if (fieldIdx < vectorType.getNumElements())
-      return vectorType.getElementType();
+      return vectorType.getElementType().getConstType(vectorType.isConst());
     return emitInferRetTypeError(loc, "out of range index '", fieldIdx,
                                  "' in vector type ", inType);
   }
@@ -2833,7 +2833,8 @@ FIRRTLType SubaccessOp::inferReturnType(ValueRange operands,
                                  indexType);
 
   if (auto vectorType = inType.dyn_cast<FVectorType>())
-    return vectorType.getElementType();
+    return vectorType.getElementType().getConstType(vectorType.isConst() &&
+                                                    isConst(indexType));
 
   return emitInferRetTypeError(loc, "subaccess requires vector operand, not ",
                                inType);
