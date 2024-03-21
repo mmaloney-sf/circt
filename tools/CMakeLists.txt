@@ -1,4 +1,5 @@
 add_subdirectory(arcilator)
+add_subdirectory(bitsy)
 add_subdirectory(circt-as)
 add_subdirectory(circt-cocotb-driver)
 add_subdirectory(circt-dis)

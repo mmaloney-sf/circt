@@ -7,6 +7,7 @@
 ##===----------------------------------------------------------------------===//
 
 add_subdirectory(Arc)
+add_subdirectory(Bitsy)
 add_subdirectory(Calyx)
 add_subdirectory(Comb)
 add_subdirectory(DC)
