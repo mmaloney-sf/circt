@@ -248,6 +248,12 @@ struct FIRParser {
   /// output a diagnostic and return failure.
   ParseResult parseToken(FIRToken::Kind expectedToken, const Twine &message);
 
+  ParseResult parseSoftKeyword(StringRef keyword, const Twine &message);
+
+  bool isSoftKeyword(StringRef keyword);
+
+  bool consumeIfSoftKeyword(StringRef keyword);
+
   /// Parse a list of elements, terminated with an arbitrary token.
   ParseResult parseListUntil(FIRToken::Kind rightToken,
                              const std::function<ParseResult()> &parseElement);
@@ -335,6 +341,50 @@ ParseResult FIRParser::parseToken(FIRToken::Kind expectedToken,
   if (consumeIf(expectedToken))
     return success();
   return emitError(message);
+}
+
+ParseResult FIRParser::parseSoftKeyword(StringRef keyword, const Twine &message) {
+  auto startTok = getToken();
+
+  StringRef id;
+  if (parseId(id, message)) {
+    return failure();
+  }
+
+  if (id != keyword) {
+    emitError(startTok.getLoc(), message);
+    return failure();
+  }
+
+  return success();
+}
+
+bool FIRParser::isSoftKeyword(StringRef keyword) {
+  StringRef id;
+  auto startTok = getToken();
+
+  switch (startTok.getKind()) {
+  case FIRToken::identifier:
+    id = getTokenSpelling().drop_front().drop_back();
+    break;
+
+  case FIRToken::literal_identifier:
+    id = getTokenSpelling();
+    break;
+
+  default:
+    return false;
+  }
+
+  return id != keyword;
+}
+
+bool FIRParser::consumeIfSoftKeyword(StringRef keyword) {
+  if (isSoftKeyword(keyword)) {
+    consumeToken();
+    return true;
+  }
+  return false;
 }
 
 /// Parse a list of elements, terminated with an arbitrary token.
