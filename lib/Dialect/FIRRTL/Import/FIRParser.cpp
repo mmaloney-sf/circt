@@ -2484,15 +2484,12 @@ FIRStmtParser::parseExpWithLeadingKeyword(FIRToken keyword) {
 ParseResult FIRStmtParser::parseSimpleStmtBlock(unsigned indent) {
   while (true) {
     // The outer level parser can handle these tokens.
-    if (getToken().isAny(FIRToken::eof, FIRToken::error))
+    if (getToken().isAny(FIRToken::r_brace, FIRToken::eof, FIRToken::error))
       return success();
 
     auto subIndent = getIndentation();
     if (!subIndent.has_value())
       return emitError("expected statement to be on its own line"), failure();
-
-    if (*subIndent <= indent)
-      return success();
 
     // Let the statement parser handle this.
     if (parseSimpleStmt(*subIndent))
@@ -2918,7 +2915,7 @@ ParseResult FIRStmtParser::parseWhen(unsigned whenIndent) {
 
   Value condition;
   if (parseExp(condition, "expected condition in 'when'") ||
-      parseToken(FIRToken::colon, "expected ':' in when") ||
+      parseToken(FIRToken::l_brace, "expected '{' in when") ||
       parseOptionalInfo())
     return failure();
 
@@ -2928,6 +2925,9 @@ ParseResult FIRStmtParser::parseWhen(unsigned whenIndent) {
 
   // Parse the 'then' body into the 'then' region.
   if (parseSubBlock(whenStmt.getThenBlock(), whenIndent, layerSym))
+    return failure();
+
+  if (parseToken(FIRToken::r_brace, "expected '}' in when"))
     return failure();
 
   // If the else is present, handle it otherwise we're done.
@@ -2941,6 +2941,9 @@ ParseResult FIRStmtParser::parseWhen(unsigned whenIndent) {
     return success();
 
   consumeToken(FIRToken::kw_else);
+
+  if (parseToken(FIRToken::l_brace, "expected '{' in when"))
+    return failure();
 
   // Create an else block to parse into.
   whenStmt.createElseRegion();
@@ -2960,9 +2963,11 @@ ParseResult FIRStmtParser::parseWhen(unsigned whenIndent) {
 
   // Parse the 'else' body into the 'else' region.
   LocationAttr elseLoc; // ignore the else locator.
-  if (parseToken(FIRToken::colon, "expected ':' after 'else'") ||
-      parseOptionalInfoLocator(elseLoc) ||
+  if (parseOptionalInfoLocator(elseLoc) ||
       parseSubBlock(whenStmt.getElseBlock(), whenIndent, layerSym))
+    return failure();
+
+  if (parseToken(FIRToken::r_brace, "expected '}' in when"))
     return failure();
 
   // TODO(firrtl spec): There is no reason for the 'else :' grammar to take an
@@ -4789,6 +4794,12 @@ ParseResult FIRCircuitParser::parseRefList(ArrayRef<PortInfo> portList,
 /// We're going to defer parsing this module, so just skip tokens until we
 /// get to the next module or the end of the file.
 ParseResult FIRCircuitParser::skipToModuleEnd(unsigned indent) {
+  llvm::outs() << "skipToModuleEnd(" << indent << ")" << "\n";
+
+  // openBraceCount starts at 1 because we assume the pareser opened a curly
+  // brace for the start of the declaration.
+  signed openBraceCount = 1;
+
   while (true) {
     switch (getToken().getKind()) {
 
@@ -4796,6 +4807,15 @@ ParseResult FIRCircuitParser::skipToModuleEnd(unsigned indent) {
     case FIRToken::eof:
     case FIRToken::error:
       return success();
+
+    case FIRToken::l_brace:
+      openBraceCount++;
+      consumeToken();
+      break;
+    case FIRToken::r_brace:
+      openBraceCount--;
+      consumeToken();
+      break;
 
     // If we got to the next top-level declaration, then we're done.
     case FIRToken::kw_class:
@@ -4808,10 +4828,7 @@ ParseResult FIRCircuitParser::skipToModuleEnd(unsigned indent) {
     case FIRToken::kw_layer:
     case FIRToken::kw_option:
     case FIRToken::kw_type:
-      // All module declarations should have the same indentation
-      // level. Use this fact to differentiate between module
-      // declarations and usages of "module" as identifiers.
-      if (getIndentation() == indent)
+      if (openBraceCount == 0)
         return success();
       [[fallthrough]];
     default:
@@ -5018,9 +5035,11 @@ ParseResult FIRCircuitParser::parseModule(CircuitOp circuit, bool isPublic,
   consumeToken(FIRToken::kw_module);
   if (parseId(name, "expected module name") ||
       parseOptionalEnabledLayers(layers) ||
-      parseToken(FIRToken::colon, "expected ':' in module definition") ||
+      parseToken(FIRToken::l_brace, "expected '{' in module definition") ||
       info.parseOptionalInfo() || parsePortList(portList, portLocs, indent))
     return failure();
+
+  llvm::outs() << "parseModule(" << indent << ") [" << name << "]" << "\n";
 
   // The main module is implicitly public.
   if (name == circuit.getName()) {
@@ -5060,6 +5079,8 @@ ParseResult FIRCircuitParser::parseModule(CircuitOp circuit, bool isPublic,
   // allows us to handle forward references correctly.
   deferredModules.emplace_back(DeferredModuleToParse{
       moduleOp, portLocs, getLexer().getCursor(), indent});
+
+  llvm::outs() << "  defer module parse [" << name << "]" << "\n";
 
   if (skipToModuleEnd(indent))
     return failure();
@@ -5251,6 +5272,7 @@ ParseResult
 FIRCircuitParser::parseModuleBody(const SymbolTable &circuitSymTbl,
                                   DeferredModuleToParse &deferredModule) {
   FModuleLike moduleOp = deferredModule.moduleOp;
+  llvm::outs() << "start of parseModuleBody(" << moduleOp.getName() << ")" << "\n";
   auto &body = moduleOp->getRegion(0).front();
   auto &portLocs = deferredModule.portLocs;
 
@@ -5312,6 +5334,8 @@ FIRCircuitParser::parseModuleBody(const SymbolTable &circuitSymTbl,
     }
   }
 
+  llvm::outs() << "end of parseModuleBody(" << moduleOp.getName() << ")" << "\n";
+
   return success();
 }
 
@@ -5327,6 +5351,8 @@ ParseResult FIRCircuitParser::parseCircuit(
     SmallVectorImpl<const llvm::MemoryBuffer *> &annotationsBufs,
     SmallVectorImpl<const llvm::MemoryBuffer *> &omirBufs,
     mlir::TimingScope &ts) {
+
+  llvm::outs() << "parseCircuit(...)" << "\n";
 
   auto indent = getIndentation();
   if (parseToken(FIRToken::kw_FIRRTL, "expected 'FIRRTL'"))
@@ -5351,7 +5377,7 @@ ParseResult FIRCircuitParser::parseCircuit(
   if (parseToken(FIRToken::kw_circuit,
                  "expected a top-level 'circuit' definition") ||
       parseId(name, "expected circuit name") ||
-      parseToken(FIRToken::colon, "expected ':' in circuit definition") ||
+      parseToken(FIRToken::l_brace, "expected '{' in circuit definition") ||
       parseOptionalAnnotations(inlineAnnotationsLoc, inlineAnnotations) ||
       info.parseOptionalInfo())
     return failure();
@@ -5476,6 +5502,7 @@ DoneParsing:
   SymbolTable circuitSymTbl(circuit);
 
   // Next, parse all the module bodies.
+
   auto anyFailed = mlir::failableParallelForEachN(
       getContext(), 0, deferredModules.size(), [&](size_t index) {
         if (parseModuleBody(circuitSymTbl, deferredModules[index]))
