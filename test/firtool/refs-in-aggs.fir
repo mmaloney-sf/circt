@@ -23,7 +23,7 @@ circuit Bundle :
 ; CHECK-SAME: out %nohw: !firrtl.openbundle<x: openvector<openbundle<p: probe<bundle<a: uint<1>, b: vector<uint<1>, 2>>>>, 2>>) {
 ; CHECK: opensubfield
 ; CHECK: opensubindex
-  module Probe :
+  module `Probe` :
     input in : {a : UInt<1>, b : UInt<1>[2]}
     output r : {a : Probe<{a : UInt<1>, b : UInt<1>[2]}>, b : Probe<{a : UInt<1>, b : UInt<1>[2]}>} ; bundle of probes of bundles (of UInt, vec)
     output mixed : {a : UInt<1>,
@@ -65,7 +65,7 @@ circuit Bundle :
     output out6 : {a : UInt<1>, b : UInt<1>[2]}
     output out7 : {a : UInt<1>, b : UInt<1>[2]}
 
-    inst p of Probe
+    inst p of `Probe`
     p.in <= in
 
    ; Resolve probes

@@ -43,31 +43,31 @@ circuit Foo : %[[
     ; SIM-FIR-SAME:   name = "mem"
     ; SIM-FIR-SAME:   prefix = "prefix1_"
     ; SIM-HW:       hw.instance "mem_ext" @prefix1_mem
-    mem mem :
+    mem `mem` :
       data-type => UInt<1>
       depth => 8
       read-latency => 1
       write-latency => 1
       reader => readData_MPORT
       writer => MPORT
-    mem.readData_MPORT.addr is invalid
-    mem.readData_MPORT.clk is invalid
-    mem.readData_MPORT.en <= UInt<1>(0h0)
-    mem.MPORT.addr is invalid
-    mem.MPORT.clk is invalid
-    mem.MPORT.en <= UInt<1>(0h0)
-    mem.MPORT.data is invalid
-    mem.MPORT.mask is invalid
-    mem.readData_MPORT.addr <= readAddr
-    mem.readData_MPORT.clk <= clock
-    readData <= mem.readData_MPORT.data
+    `mem`.readData_MPORT.addr is invalid
+    `mem`.readData_MPORT.clk is invalid
+    `mem`.readData_MPORT.en <= UInt<1>(0h0)
+    `mem`.MPORT.addr is invalid
+    `mem`.MPORT.clk is invalid
+    `mem`.MPORT.en <= UInt<1>(0h0)
+    `mem`.MPORT.data is invalid
+    `mem`.MPORT.mask is invalid
+    `mem`.readData_MPORT.addr <= readAddr
+    `mem`.readData_MPORT.clk <= clock
+    readData <= `mem`.readData_MPORT.data
     when writeEn :
-      mem.MPORT.addr <= writeAddr
-      mem.MPORT.clk <= clock
-      mem.MPORT.en <= UInt<1>(0h1)
-      mem.MPORT.mask <= UInt<1>(0h0)
-      mem.MPORT.data <= writeData
-      mem.MPORT.mask <= UInt<1>(0h1)
+      `mem`.MPORT.addr <= writeAddr
+      `mem`.MPORT.clk <= clock
+      `mem`.MPORT.en <= UInt<1>(0h1)
+      `mem`.MPORT.mask <= UInt<1>(0h0)
+      `mem`.MPORT.data <= writeData
+      `mem`.MPORT.mask <= UInt<1>(0h1)
 
   ; CHECK-FIR-LABEL: firrtl.module private @prefix2_Baz
   ; CHECK-HW-LABEL: hw.module private @prefix2_Baz
@@ -86,31 +86,31 @@ circuit Foo : %[[
     ; SIM-FIR-SAME:   name = "mem"
     ; SIM-FIR-SAME:   prefix = "prefix2_"
     ; SIM-HW:       hw.instance "mem_ext" @prefix2_mem
-    mem mem :
+    mem `mem` :
       data-type => UInt<2>
       depth => 8
       read-latency => 1
       write-latency => 1
       reader => readData_MPORT
       writer => MPORT
-    mem.readData_MPORT.addr is invalid
-    mem.readData_MPORT.clk is invalid
-    mem.readData_MPORT.en <= UInt<1>(0h0)
-    mem.MPORT.addr is invalid
-    mem.MPORT.clk is invalid
-    mem.MPORT.en <= UInt<1>(0h0)
-    mem.MPORT.data is invalid
-    mem.MPORT.mask is invalid
-    mem.readData_MPORT.addr <= readAddr
-    mem.readData_MPORT.clk <= clock
-    readData <= mem.readData_MPORT.data
+    `mem`.readData_MPORT.addr is invalid
+    `mem`.readData_MPORT.clk is invalid
+    `mem`.readData_MPORT.en <= UInt<1>(0h0)
+    `mem`.MPORT.addr is invalid
+    `mem`.MPORT.clk is invalid
+    `mem`.MPORT.en <= UInt<1>(0h0)
+    `mem`.MPORT.data is invalid
+    `mem`.MPORT.mask is invalid
+    `mem`.readData_MPORT.addr <= readAddr
+    `mem`.readData_MPORT.clk <= clock
+    readData <= `mem`.readData_MPORT.data
     when writeEn :
-      mem.MPORT.addr <= writeAddr
-      mem.MPORT.clk <= clock
-      mem.MPORT.en <= UInt<1>(0h1)
-      mem.MPORT.mask <= UInt<1>(0h0)
-      mem.MPORT.data <= writeData
-      mem.MPORT.mask <= UInt<1>(0h1)
+      `mem`.MPORT.addr <= writeAddr
+      `mem`.MPORT.clk <= clock
+      `mem`.MPORT.en <= UInt<1>(0h1)
+      `mem`.MPORT.mask <= UInt<1>(0h0)
+      `mem`.MPORT.data <= writeData
+      `mem`.MPORT.mask <= UInt<1>(0h1)
 
   public module Foo :
     input clock : Clock

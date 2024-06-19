@@ -777,7 +777,7 @@ firrtl.circuit "Foo" {
       @Group1234567890::@Group1234567890::@Group1234567890::@Group1234567890::@Group1234567890::@Group1234567890::@Group1234567890::@Group1234567890
     ]} {}
 
-  // CHECK: module RWProbe :
+  // CHECK: module RWProbeMod :
   // CHECK-NEXT: input in : { a : UInt<1> }[2]
   // CHECK-NEXT: output p : RWProbe<UInt<1>>
   // CHECK-NEXT: output p2 : RWProbe<UInt>
@@ -785,10 +785,10 @@ firrtl.circuit "Foo" {
   // CHECK-NEXT: define p = rwprobe(in[1].a)
   // CHECK-NEXT: node q = read(p)
   // CHECK-NEXT: define p2 = rwprobe(q)
-  firrtl.module private @RWProbe(in %in: !firrtl.vector<bundle<a: uint<1>>, 2> sym [<@sym,4,public>],
+  firrtl.module private @RWProbeMod(in %in: !firrtl.vector<bundle<a: uint<1>>, 2> sym [<@sym,4,public>],
                                  out %p: !firrtl.rwprobe<uint<1>>,
                                  out %p2 : !firrtl.rwprobe<uint>) {
-    %0 = firrtl.ref.rwprobe <@RWProbe::@sym> : !firrtl.rwprobe<uint<1>>
+    %0 = firrtl.ref.rwprobe <@RWProbeMod::@sym> : !firrtl.rwprobe<uint<1>>
     firrtl.ref.define %p, %0 : !firrtl.rwprobe<uint<1>>
 
     %read = firrtl.ref.resolve %p : !firrtl.rwprobe<uint<1>>
@@ -814,10 +814,10 @@ firrtl.circuit "Foo" {
 
   // CHECK-LABEL: module InstChoice :
   firrtl.module public @InstChoice() {
-    // CHECK: instchoice inst of DefaultTarget, Platform :
+    // CHECK: instchoice i of DefaultTarget, Platform :
     // CHECK-NEXT:    FPGA => FPGATarget
     // CHECK-NEXT:    ASIC => ASICTarget
-    firrtl.instance_choice inst @DefaultTarget alternatives @Platform
+    firrtl.instance_choice i @DefaultTarget alternatives @Platform
       { @FPGA -> @FPGATarget, @ASIC -> @ASICTarget } ()
   }
 

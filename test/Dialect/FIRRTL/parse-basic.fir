@@ -15,7 +15,7 @@ circuit MyModule :     ; CHECK: firrtl.circuit "MyModule" {
 
 
   ; CHECK-LABEL: firrtl.module private @circuit(in %in: !firrtl.uint<80>) {
-  module circuit :    ; Module with a keyword id.
+  module `circuit` :    ; Module with a keyword id.
     input in: UInt<80>
 
   ; CHECK: }
@@ -349,7 +349,7 @@ circuit MyModule :     ; CHECK: firrtl.circuit "MyModule" {
       reset => (UInt<1>("h0"), _t_2622)
 
     ; CHECK: %xyz_in = firrtl.instance xyz interesting_name @circuit(in in: !firrtl.uint<80>)
-    inst xyz of circuit
+    inst xyz of `circuit`
     ; CHECK: [[PAD:%.*]] = firrtl.pad %i8, 80 : (!firrtl.uint<8>) -> !firrtl.uint<80>
     ; CHECK: firrtl.matchingconnect %xyz_in, [[PAD]] : !firrtl.uint<80>
     xyz.in <= i8
@@ -467,20 +467,20 @@ circuit MyModule :     ; CHECK: firrtl.circuit "MyModule" {
   ; CHECK-LABEL: firrtl.module private @expr_stmt_ambiguity(
   module expr_stmt_ambiguity :
     ; CHECK: %reg = firrtl.wire interesting_name : !firrtl.uint
-    wire reg : UInt
+    wire `reg` : UInt
     ; CHECK: firrtl.connect %reg,
-    reg <= UInt(42)
+    `reg` <= UInt(42)
 
     ; CHECK: %write = firrtl.wire
-    wire write : { id : UInt<4>, resp : UInt<2>}
+    wire `write` : { id : UInt<4>, resp : UInt<2>}
 
     ; CHECK: firrtl.subfield %write[id]
-    write.id <= UInt(1)
+    `write`.id <= UInt(1)
 
   ; CHECK-LABEL: firrtl.module private @expr_stmt_ambiguity2(
   module expr_stmt_ambiguity2 :
     ; CHECK: firrtl.instance write interesting_name @circuit
-    inst write of circuit
+    inst `write` of `circuit`
     ; CHECK: firrtl.connect %write_in
     write.in <= UInt(1)
 
@@ -714,10 +714,10 @@ circuit MyModule :     ; CHECK: firrtl.circuit "MyModule" {
   ; https://github.com/llvm/circt/issues/559
   ; CHECK-LABEL: firrtl.module private @TrickyIssue559
   module TrickyIssue559:
-    input input: UInt<1>
-    output output: UInt<1>
+    input `input`: UInt<1>
+    output `output`: UInt<1>
     ; CHECK: firrtl.matchingconnect %output, %input
-    output <= input
+    `output` <= `input`
 
   ; CHECK-LABEL: firrtl.module private @CheckInvalids
   module CheckInvalids_in0 :
@@ -841,7 +841,7 @@ circuit MyModule :     ; CHECK: firrtl.circuit "MyModule" {
     output rData: UInt<8>
 
     ; CHECK: %mem_r = firrtl.mem interesting_name Undefined {depth = 16 : i64, name = "mem", portNames = ["r"], readLatency = 2 : i32, writeLatency = 1 : i32} : !firrtl.bundle<addr: uint<4>, en: uint<1>, clk: clock, data flip: uint<8>>
-    mem mem:
+    mem `mem`:
       data-type => UInt<8>
       depth => 16
       reader => r
@@ -849,10 +849,10 @@ circuit MyModule :     ; CHECK: firrtl.circuit "MyModule" {
       write-latency => 1
       read-under-write => undefined
 
-    mem.r.clk <= clock
-    mem.r.en <= rEn
-    mem.r.addr <= rAddr
-    rData <= mem.r.data
+    `mem`.r.clk <= clock
+    `mem`.r.en <= rEn
+    `mem`.r.addr <= rAddr
+    rData <= `mem`.r.data
 
   ; Test that behavioral memory reads and writes both work and that flow checks
   ; don't fail here.  (A memory port should have duplex flow.)
@@ -951,9 +951,9 @@ circuit MyModule :     ; CHECK: firrtl.circuit "MyModule" {
     input in: UInt
 
   module ModuleAsIdentifier:
-    inst module of SomeModule
+    inst `module` of SomeModule
     ; CHECK: firrtl.instance module interesting_name @SomeModule
-    module.in <= UInt(1)
+    `module`.in <= UInt(1)
 
   ; CHECK-LABEL: firrtl.module private @EnumTypes
   module EnumTypes:
@@ -1311,7 +1311,7 @@ FIRRTL version 3.0.0
 circuit Probes_refexprs:
   extmodule refs:
     output `0`: {`1`: Probe<{`2`: UInt<1>}>, rwprobe: RWProbe<UInt<1>>}
-    output ref: {module: Probe<{when: UInt<1>}>}
+    output ref: {`module`: Probe<{`when`: UInt<1>}>}
 
   module Probes_refexprs:
     output `0`: {`1`: Probe<{`2`: UInt<1>}>}
@@ -1326,7 +1326,7 @@ circuit Probes_refexprs:
     ; CHECK-COUNT-4: firrtl.ref.resolve
     node a = read(`9`.`0`.`1`).`2`
     node b = read(`9`.`0`.`1`.`2`)
-    node c = read(`9`.ref.module).when
+    node c = read(`9`.ref.`module`).`when`
     ; Keyword as leading part of static ref expression:
     node d = read(ref.`0`.`1`.`2`)
 
@@ -1519,7 +1519,7 @@ FIRRTL version 3.3.0
 circuit BasicProps :
   module BasicProps :
   ; CHECK-LABEL: module private @Integer
-  module Integer :
+  module `Integer` :
     ; CHECK-SAME: out %a: !firrtl.integer
     output a : Integer
     ; CHECK: %0 = firrtl.integer -10
@@ -1527,20 +1527,20 @@ circuit BasicProps :
     propassign a, Integer(-10)
 
   ; CHECK-LABEL: module private @Bool
-  module Bool :
+  module `Bool` :
     ; CHECK-SAME: out %true: !firrtl.bool
     ; CHECK-SAME: out %false: !firrtl.bool
-    output true : Bool
-    output false : Bool
+    output `true` : Bool
+    output `false` : Bool
     ; CHECK-NEXT: %0 = firrtl.bool true
     ; CHECK-NEXT: firrtl.propassign %true, %0 : !firrtl.bool
     ; CHECK-NEXT: %1 = firrtl.bool false
     ; CHECK-NEXT: firrtl.propassign %false, %1 : !firrtl.bool
-    propassign true, Bool(true)
-    propassign false, Bool(false)
+    propassign `true`, Bool(true)
+    propassign `false`, Bool(false)
 
   ; CHECK-LABEL: module private @Double
-  module Double :
+  module `Double` :
      ; CHECK-SAME: out %x: !firrtl.double
      ; CHECK-SAME: out %y: !firrtl.double
      ; CHECK-SAME: out %negzero: !firrtl.double
@@ -1565,7 +1565,7 @@ circuit BasicProps :
      propassign exp, Double(1.2E+30)
 
   ; CHECK-LABEL: module private @String
-  module String :
+  module `String` :
     ; CHECK-SAME: out %a: !firrtl.string
     output a : String
     ; CHECK: %0 = firrtl.string "hello"
@@ -1573,7 +1573,7 @@ circuit BasicProps :
     propassign a, String("hello")
 
   ; CHECK-LABEL: module private @Path
-  module Path :
+  module `Path` :
     ; CHECK-SAME: out %path: !firrtl.path
     output path : Path
     ; CHECK: firrtl.unresolved_path "OMDeleted"
@@ -1618,7 +1618,7 @@ circuit BasicProps :
     propassign out, ext_object.out
 
   ; CHECK-LABEL: module private @List
-  module List :
+  module `List` :
     ; CHECK-SAME: out %strings: !firrtl.list<string>
     ; CHECK-SAME: out %objs: !firrtl.list<class<@SimpleClass({{.*}})>>
     ; CHECK-SAME: out %nested: !firrtl.list<list<string>>
@@ -1705,10 +1705,10 @@ circuit WireOfProbesAndNames:
 FIRRTL version 3.3.0
 
 ; CHECK-LABEL: circuit "AnyRef"
-circuit AnyRef:
+circuit `AnyRef`:
   class Foo:
     skip
-  module AnyRef:
+  module `AnyRef`:
     input x : AnyRef
     ; CHECK: !firrtl.anyref
     output y : AnyRef

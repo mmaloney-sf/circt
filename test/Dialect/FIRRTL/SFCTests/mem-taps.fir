@@ -33,11 +33,11 @@ circuit Top : %[[
     output io : { flip addr : UInt<3>, flip dataIn : UInt<8>, flip wen : UInt<1>, dataOut : UInt<8>}
 
     cmem rf : UInt<8> [8]
-    infer mport read = rf[io.addr], clock
-    io.dataOut <= read
+    infer mport `read` = rf[io.addr], clock
+    io.dataOut <= `read`
     when io.wen :
-      infer mport write = rf[io.addr], clock
-      write <= io.dataIn
+      infer mport `write` = rf[io.addr], clock
+      `write` <= io.dataIn
 
   public module Top :
     input clock : Clock

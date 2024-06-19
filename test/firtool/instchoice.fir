@@ -26,7 +26,7 @@ circuit Foo:
     ; CHECK-SAME:   @FPGA -> @FPGATarget,
     ; CHECK-SAME:   @ASIC -> @ASICTarget
     ; CHECK-SAME: } (in clock: !firrtl.clock)
-    instchoice inst of DefaultTarget, Platform :
+    instchoice `inst` of DefaultTarget, Platform :
       FPGA => FPGATarget
       ASIC => ASICTarget
 

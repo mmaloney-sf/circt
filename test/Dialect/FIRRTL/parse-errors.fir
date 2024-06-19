@@ -304,20 +304,20 @@ circuit Issue426:
 ;// -----
 
 FIRRTL version 4.0.0
-circuit circuit:
-  public module circuit :
+circuit `circuit`:
+  public module `circuit` :
     input in: UInt<80>
-    inst xyz of circuit
+    inst xyz of `circuit`
     node n = xyz
     node m = n     ; expected-error {{expected '.' in field reference}}
 
 ;// -----
 
 FIRRTL version 4.0.0
-circuit circuit:
-  public module circuit :
+circuit `circuit`:
+  public module `circuit` :
     input in: UInt<80>
-    inst xyz of circuit
+    inst xyz of `circuit`
     node n = xyz.foo   ; expected-error {{use of invalid field name 'foo' on bundle value}}
 
 ;// -----
@@ -613,10 +613,10 @@ circuit ProbeSMem:
     output io : { flip addr : UInt<3>, dataOut : UInt<8>}
     output out : Probe<UInt<8>>
 
-    smem mem : UInt<8> [8]
-    infer mport read = mem[io.addr], clock
-    io.dataOut <= read
-    define out = probe(read) ; expected-error {{cannot probe memories or their ports}}
+    smem `mem` : UInt<8> [8]
+    infer mport `read` = `mem`[io.addr], clock
+    io.dataOut <= `read`
+    define out = probe(`read`) ; expected-error {{cannot probe memories or their ports}}
 
 
 ;// -----
@@ -685,7 +685,7 @@ circuit RegReset_v2p0p0:
   module RegReset_v2p0p0:
     input clock: Clock
 
-    ; expected-error @below {{use of unknown declaration 'regreset'}}
+    ; expected-error @below {{unexpected token in module}}
     regreset a: UInt<1>, clock, UInt<1>(0), UInt<1>(0)
 
 ;// -----
@@ -1138,16 +1138,16 @@ circuit Top:
 ;// -----
 ; AnyRef not yet supported.
 FIRRTL version 3.1.0
-circuit AnyRef:
-   module AnyRef:
+circuit `AnyRef`:
+   module `AnyRef`:
      ; expected-error @below {{AnyRef types are a FIRRTL 3.3.0+ feature}}
      output a : AnyRef
 
 ;// -----
 ; Only objects are valid as AnyRef
 FIRRTL version 3.3.0
-circuit AnyRef:
-  module AnyRef:
+circuit `AnyRef`:
+  module `AnyRef`:
     output out : AnyRef
     ; expected-error @below {{cannot propassign non-equivalent type '!firrtl.integer' to '!firrtl.anyref'}}
     propassign out, Integer(5)
@@ -1284,7 +1284,7 @@ circuit Foo:
 
   module Foo:
     ; expected-error @below {{option groups/instance choices are a FIRRTL 4.0.0+ feature}}
-    instchoice inst of DefaultTarget Platform :
+    instchoice `inst` of DefaultTarget Platform :
       FPGA => FPGATarget
       ASIC => ASICTarget
 
@@ -1303,7 +1303,7 @@ circuit Foo:
 
   public module Foo:
     ; expected-error @below {{instance case port 'clock' type does not match the default module port}}
-    instchoice inst of DefaultTarget, Platform :
+    instchoice `inst` of DefaultTarget, Platform :
       FPGA => FPGATarget
 
 ;// -----
@@ -1321,7 +1321,7 @@ circuit Foo:
 
   public module Foo:
     ; expected-error @below {{instance case module port 'x' does not match the default module port 'clock'}}
-    instchoice inst of DefaultTarget, Platform :
+    instchoice `inst` of DefaultTarget, Platform :
       FPGA => FPGATarget
 
 ;// -----
@@ -1336,7 +1336,7 @@ circuit Foo:
 
   public module Foo:
     ; expected-error @below {{use of undefined option case 'ASIC'}}
-    instchoice inst of DefaultTarget, Platform :
+    instchoice `inst` of DefaultTarget, Platform :
       ASIC => FPGATarget
 
 ;// -----
@@ -1348,7 +1348,7 @@ circuit Foo:
 
   public module Foo:
     ; expected-error @below {{use of undefined option group 'Platform'}}
-    instchoice inst of DefaultTarget, Platform :
+    instchoice `inst` of DefaultTarget, Platform :
       ASIC => FPGATarget
 
 ;// -----

@@ -74,9 +74,9 @@ circuit Foo : %[[
     input unsigned : UInt<29>
     input zeroW : UInt<0>
     output signed : UInt<31>
-    inst parameter of Bar
-    parameter.b.signed <= unsigned
-    parameter.b.qux <= unsigned
+    inst `parameter` of Bar
+    `parameter`.b.signed <= unsigned
+    `parameter`.b.qux <= unsigned
     signed <= unsigned
   module Bar :
     input b: {signed: UInt<1>, qux: UInt<1>}

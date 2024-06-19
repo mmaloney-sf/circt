@@ -15,7 +15,7 @@ circuit Bar :
 
     ; When the type is not passive, the tap should be a wire with the passive
     ; type of the original wire.
-    wire flip: {flip a: UInt<1>}
+    wire `flip`: {flip a: UInt<1>}
     ; CHECK: %flip = firrtl.wire interesting_name : !firrtl.bundle<a flip: uint<1>>
 
     ; Analog values should be tapped with a node.
