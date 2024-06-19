@@ -4492,8 +4492,17 @@ ParseResult FIRStmtParser::parseRegister(unsigned regIndent) {
       if (!hasExtraLParen)
         return emitError("expected indented reset specifier in reg"), failure();
 
-    if (parseToken(FIRToken::kw_reset, "expected 'reset' in reg") ||
-        parseToken(FIRToken::equal_greater, "expected => in reset specifier") ||
+    StringRef kwReset;
+    if (parseId(kwReset, "expected soft keyword 'reset'")) {
+      return failure();
+    }
+
+    if (kwReset != "reset") {
+      emitError(startTok.getLoc(), "expected soft keyword 'reset'");
+      return failure();
+    }
+
+    if (parseToken(FIRToken::equal_greater, "expected => in reset specifier") ||
         parseToken(FIRToken::l_paren, "expected '(' in reset specifier") ||
         parseExp(resetSignal, "expected expression for reset signal") ||
         parseToken(FIRToken::comma, "expected ','"))
